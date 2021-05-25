@@ -295,7 +295,6 @@ export const dijkstraSolve = (submission: Grid): DijkstraMaze => {
   let currentCell = exitCell;
 
   while (!(currentCell === startCell)) {
-    // for (let i = 0; i < 50; i++) {
     console.log(currentCell);
     currentCell.onPath = true;
     const nextCell = maze.getBestPathNeighbor(currentCell);
@@ -307,7 +306,6 @@ export const dijkstraSolve = (submission: Grid): DijkstraMaze => {
   maze.frames.push(cloneDeep(maze.grid));
 
   const t1 = performance.now();
-
   console.log("solved in:", t1 - t0, "milliseconds.", maze);
 
   return maze;

@@ -56,7 +56,7 @@ const Maze = () => {
         ms.
         <button
           onClick={() => {
-            setMaze(dijkstraSolve(cloneDeep(maze)));
+            setMaze(dijkstraSolve(maze));
           }}
         >
           Solve
