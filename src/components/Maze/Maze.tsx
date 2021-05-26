@@ -1,22 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import styles from "./Maze.module.scss";
 import {
-  generateRecursiveBacktrackMaze,
   Grid,
+  RecursiveBacktrackMaze,
+  RecursiveDivisionMaze,
 } from "../../service/mazeGenerator.service";
-import { dijkstraSolve } from "../../service/mazeSolver.service";
 import Canvas from "./Canvas/Canvas";
 import { cloneDeep } from "lodash";
+import { DijkstraMaze } from "../../service/mazeSolver.service";
 
 const Maze = () => {
   const [dimensions] = useState({ width: 15, height: 10 });
   const [maze, setMaze] = useState(new Grid(dimensions.width, dimensions.height));
   const [delayBetweenFrames, setFrameDelay] = useState(1);
-
-  useEffect(() => {
-    // setDimensions({ width: 10, height: 10 });
-    console.log(maze);
-  }, [maze]);
 
   const handleChange = (event: any): void => {
     let newDelay = Number(event.target.value);
@@ -25,6 +21,7 @@ const Maze = () => {
     setFrameDelay(newDelay);
   };
 
+  console.log(maze);
   return (
     <div className={styles.mazeContainer}>
       <div className={styles.maze} id="maze">
@@ -38,25 +35,31 @@ const Maze = () => {
         </button>
         <button
           onClick={() => {
-            setMaze(
-              generateRecursiveBacktrackMaze(dimensions.width, dimensions.height)
-            );
+            setMaze(new RecursiveBacktrackMaze(dimensions.width, dimensions.height));
           }}
         >
-          New maze
+          New Backtrack maze
+        </button>
+        <button
+          onClick={() => {
+            setMaze(new RecursiveDivisionMaze(dimensions.width, dimensions.height));
+          }}
+        >
+          New Division maze
         </button>
         Interval:{" "}
         <input
           type="number"
-          min="0"
-          max="2000"
+          min="1"
+          max="1000"
+          step="10"
           defaultValue={delayBetweenFrames}
           onChange={handleChange}
         />{" "}
         ms.
         <button
           onClick={() => {
-            setMaze(dijkstraSolve(maze));
+            setMaze(new DijkstraMaze(maze));
           }}
         >
           Solve

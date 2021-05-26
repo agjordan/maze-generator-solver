@@ -1,4 +1,11 @@
-import { RecursiveBacktrackMaze, Walls, Cell, Grid } from "./mazeGenerator.service";
+import {
+  RecursiveBacktrackMaze,
+  Walls,
+  Cell,
+  Grid,
+  RecursiveDivisionMaze,
+  RecursiveDivisionCell,
+} from "./mazeGenerator.service";
 import { cloneDeep } from "lodash";
 
 class CellForSolving extends Cell {
@@ -30,23 +37,21 @@ class DijkstraCell extends CellForSolving {
 }
 
 export class DijkstraMaze extends Grid {
-  height: number;
-  width: number;
   grid: DijkstraCell[][];
   frames: DijkstraCell[][][];
 
-  constructor(maze: RecursiveBacktrackMaze) {
+  constructor(maze: RecursiveBacktrackMaze | RecursiveDivisionMaze) {
     super(maze.width, maze.height);
-    this.height = maze.height;
-    this.width = maze.width;
     this.frames = [];
     this.algorithm = "DijkstraSolve";
 
-    this.grid = maze.grid.map((row) => {
-      return row.map((cell) => {
+    this.grid = maze.grid.map((row: RecursiveDivisionCell[] | Cell[]) => {
+      return row.map((cell: RecursiveDivisionCell | Cell) => {
         return new DijkstraCell(cell);
       });
     });
+
+    this.solve();
   }
 
   getUnvisitedNeighbours = (cell: DijkstraCell): DijkstraCell[] => {
@@ -60,19 +65,19 @@ export class DijkstraMaze extends Grid {
     const cellFromDirection = (direction: string): DijkstraCell | null => {
       switch (direction) {
         case "N":
-          if (!this.grid[cell.x][cell.y - 1].visited)
+          if (!this.grid[cell.x][cell.y - 1]?.visited)
             return this.grid[cell.x][cell.y - 1];
           return null;
         case "E":
-          if (!this.grid[cell.x + 1][cell.y].visited)
+          if (!this.grid[cell.x + 1][cell.y]?.visited)
             return this.grid[cell.x + 1][cell.y];
           return null;
         case "S":
-          if (!this.grid[cell.x][cell.y + 1].visited)
+          if (!this.grid[cell.x][cell.y + 1]?.visited)
             return this.grid[cell.x][cell.y + 1];
           return null;
         case "W":
-          if (!this.grid[cell.x - 1][cell.y].visited)
+          if (!this.grid[cell.x - 1][cell.y]?.visited)
             return this.grid[cell.x - 1][cell.y];
           return null;
         default:
@@ -104,19 +109,19 @@ export class DijkstraMaze extends Grid {
     const cellFromDirection = (direction: string): DijkstraCell | null => {
       switch (direction) {
         case "N":
-          if (!this.grid[cell.x][cell.y - 1].onPath)
+          if (!this.grid[cell.x][cell.y - 1]?.onPath)
             return this.grid[cell.x][cell.y - 1];
           return null;
         case "E":
-          if (!this.grid[cell.x + 1][cell.y].onPath)
+          if (!this.grid[cell.x + 1][cell.y]?.onPath)
             return this.grid[cell.x + 1][cell.y];
           return null;
         case "S":
-          if (!this.grid[cell.x][cell.y + 1].onPath)
+          if (!this.grid[cell.x][cell.y + 1]?.onPath)
             return this.grid[cell.x][cell.y + 1];
           return null;
         case "W":
-          if (!this.grid[cell.x - 1][cell.y].onPath)
+          if (!this.grid[cell.x - 1][cell.y]?.onPath)
             return this.grid[cell.x - 1][cell.y];
           return null;
         default:
@@ -138,6 +143,73 @@ export class DijkstraMaze extends Grid {
       lowest.distanceFromSource < cell.distanceFromSource ? lowest : cell
     );
   }
+
+  getAllNodes = (): DijkstraCell[] => {
+    let nodes: DijkstraCell[] = [];
+    for (let row of this.grid) {
+      for (let cell of row) {
+        nodes.push(cell);
+      }
+    }
+    return nodes;
+  };
+
+  updateNeighbourDistances = (currentCell: DijkstraCell) => {
+    const updateDistance = (currentCell: DijkstraCell, targetCell: DijkstraCell) => {
+      targetCell.distanceFromSource =
+        currentCell.distanceFromSource + targetCell.moveCost;
+    };
+
+    const neighbours = this.getUnvisitedNeighbours(currentCell);
+    neighbours.forEach((cell) => {
+      updateDistance(currentCell, cell);
+    });
+  };
+
+  solve = () => {
+    const sortNodesByDistance = (nodeList: DijkstraCell[]) => {
+      return nodeList.sort(
+        (firstNode, secondNode) =>
+          firstNode.distanceFromSource - secondNode.distanceFromSource
+      );
+    };
+
+    const t0 = performance.now();
+
+    const exitCell = this.grid[this.width - 1][this.height - 1];
+    const unvisitedCells = this.getAllNodes();
+    const startCell = this.grid[0][0];
+    startCell.distanceFromSource = 0;
+
+    while (!!unvisitedCells.length) {
+      sortNodesByDistance(unvisitedCells);
+      const currentCell = unvisitedCells.shift();
+
+      if (currentCell === undefined) break;
+      if (currentCell.distanceFromSource === Infinity) break;
+      if (currentCell === exitCell) break;
+
+      currentCell.visited = true;
+
+      this.updateNeighbourDistances(currentCell);
+      this.frames.push(cloneDeep(this.grid));
+    }
+
+    let currentCell = exitCell;
+
+    while (!(currentCell === startCell)) {
+      currentCell.onPath = true;
+      const nextCell = this.getBestPathNeighbor(currentCell);
+      this.frames.push(cloneDeep(this.grid));
+      currentCell = nextCell;
+    }
+
+    startCell.onPath = true;
+    this.frames.push(cloneDeep(this.grid));
+
+    const t1 = performance.now();
+    console.log("solved in:", t1 - t0, "milliseconds.");
+  };
 
   draw(canvasContext: any, unitSize: number, step: number) {
     canvasContext.clearRect(0, 0, unitSize * this.width, unitSize * this.height);
@@ -240,73 +312,3 @@ export class DijkstraMaze extends Grid {
     canvasContext.fill();
   }
 }
-
-const getAllNodes = (grid: DijkstraCell[][]): DijkstraCell[] => {
-  let nodes: DijkstraCell[] = [];
-  for (let row of grid) {
-    for (let cell of row) {
-      nodes.push(cell);
-    }
-  }
-  return nodes;
-};
-
-const sortNodesByDistance = (nodeList: DijkstraCell[]) => {
-  return nodeList.sort(
-    (firstNode, secondNode) =>
-      firstNode.distanceFromSource - secondNode.distanceFromSource
-  );
-};
-
-const updateDistance = (currentCell: DijkstraCell, targetCell: DijkstraCell) => {
-  targetCell.distanceFromSource =
-    currentCell.distanceFromSource + targetCell.moveCost;
-};
-
-const updateNeighbourDistances = (currentCell: DijkstraCell, maze: DijkstraMaze) => {
-  const neighbours = maze.getUnvisitedNeighbours(currentCell);
-  neighbours.forEach((cell) => {
-    updateDistance(currentCell, cell);
-  });
-};
-
-export const dijkstraSolve = (submission: Grid): DijkstraMaze => {
-  const t0 = performance.now();
-  const maze = new DijkstraMaze(submission);
-  const exitCell = maze.grid[maze.width - 1][maze.height - 1];
-  const unvisitedCells = getAllNodes(maze.grid);
-  const startCell = maze.grid[0][0];
-  startCell.distanceFromSource = 0;
-
-  while (!!unvisitedCells.length) {
-    sortNodesByDistance(unvisitedCells);
-    const currentCell = unvisitedCells.shift();
-
-    if (currentCell === undefined) break;
-    if (currentCell.distanceFromSource === Infinity) break;
-    if (currentCell === exitCell) break;
-
-    currentCell.visited = true;
-
-    updateNeighbourDistances(currentCell, maze);
-    maze.frames.push(cloneDeep(maze.grid));
-  }
-
-  let currentCell = exitCell;
-
-  while (!(currentCell === startCell)) {
-    console.log(currentCell);
-    currentCell.onPath = true;
-    const nextCell = maze.getBestPathNeighbor(currentCell);
-    maze.frames.push(cloneDeep(maze.grid));
-    currentCell = nextCell;
-  }
-
-  startCell.onPath = true;
-  maze.frames.push(cloneDeep(maze.grid));
-
-  const t1 = performance.now();
-  console.log("solved in:", t1 - t0, "milliseconds.", maze);
-
-  return maze;
-};

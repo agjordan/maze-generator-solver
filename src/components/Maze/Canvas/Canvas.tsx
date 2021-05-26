@@ -2,11 +2,12 @@ import React, { useRef, useEffect, useState } from "react";
 import {
   Grid,
   RecursiveBacktrackMaze,
+  RecursiveDivisionMaze,
 } from "../../../service/mazeGenerator.service";
 import { DijkstraMaze } from "../../../service/mazeSolver.service";
 
 type CanvasProps = {
-  maze: Grid | RecursiveBacktrackMaze | DijkstraMaze;
+  maze: Grid | RecursiveBacktrackMaze | RecursiveDivisionMaze | DijkstraMaze;
   delayBetweenFrames: number;
 };
 
@@ -44,6 +45,18 @@ const Canvas = ({ maze, delayBetweenFrames }: CanvasProps) => {
   useEffect(() => {
     if (!context) throw new Error("No context");
 
+    context.clearRect(
+      0,
+      0,
+      maze.width * unitSize + 300,
+      maze.height * unitSize + 100
+    );
+    context.font = "20px Roboto";
+    context.fillText(
+      `${step + 1} / ${maze.frames.length}`,
+      maze.width * unitSize + unitSize,
+      100
+    );
     maze.draw(context, unitSize, step);
 
     setTimeout(() => {
