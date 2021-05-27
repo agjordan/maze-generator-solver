@@ -4,10 +4,10 @@ import {
   RecursiveBacktrackMaze,
   RecursiveDivisionMaze,
 } from "../../../service/mazeGenerator.service";
-import { DijkstraMaze } from "../../../service/mazeSolver.service";
+import { DijkstraSolve } from "../../../service/mazeSolver.service";
 
 type CanvasProps = {
-  maze: Grid | RecursiveBacktrackMaze | RecursiveDivisionMaze | DijkstraMaze;
+  maze: Grid | RecursiveBacktrackMaze | RecursiveDivisionMaze | DijkstraSolve;
   delayBetweenFrames: number;
 };
 

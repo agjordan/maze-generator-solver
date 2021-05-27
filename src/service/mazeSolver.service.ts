@@ -36,7 +36,7 @@ class DijkstraCell extends CellForSolving {
   }
 }
 
-export class DijkstraMaze extends Grid {
+export class DijkstraSolve extends Grid {
   grid: DijkstraCell[][];
   frames: DijkstraCell[][][];
 

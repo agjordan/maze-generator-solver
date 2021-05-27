@@ -7,7 +7,7 @@ import {
 } from "../../service/mazeGenerator.service";
 import Canvas from "./Canvas/Canvas";
 import { cloneDeep } from "lodash";
-import { DijkstraMaze } from "../../service/mazeSolver.service";
+import { DijkstraSolve } from "../../service/mazeSolver.service";
 
 const Maze = () => {
   const [dimensions] = useState({ width: 15, height: 10 });
@@ -53,6 +53,13 @@ const Maze = () => {
             New Division maze
           </button>
           Interval:{" "}
+          <button
+            onClick={() => {
+              setMaze(new DijkstraSolve(maze));
+            }}
+          >
+            Solve
+          </button>
           <input
             type="number"
             min="1"
@@ -62,13 +69,6 @@ const Maze = () => {
             onChange={handleChange}
           />{" "}
           ms.
-          <button
-            onClick={() => {
-              setMaze(new DijkstraMaze(maze));
-            }}
-          >
-            Solve
-          </button>
         </div>
       </div>
     </div>
