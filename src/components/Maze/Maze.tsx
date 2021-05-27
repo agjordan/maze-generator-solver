@@ -52,7 +52,6 @@ const Maze = () => {
           >
             New Division maze
           </button>
-          Interval:{" "}
           <button
             onClick={() => {
               setMaze(new DijkstraSolve(maze));
@@ -60,6 +59,7 @@ const Maze = () => {
           >
             Solve
           </button>
+          Interval:{" "}
           <input
             type="number"
             min="1"
