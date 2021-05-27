@@ -26,44 +26,50 @@ const Maze = () => {
     <div className={styles.mazeContainer}>
       <div className={styles.maze} id="maze">
         <Canvas maze={maze} delayBetweenFrames={delayBetweenFrames} />
-        <button
-          onClick={() => {
-            setMaze(cloneDeep(maze));
-          }}
-        >
-          Re-run
-        </button>
-        <button
-          onClick={() => {
-            setMaze(new RecursiveBacktrackMaze(dimensions.width, dimensions.height));
-          }}
-        >
-          New Backtrack maze
-        </button>
-        <button
-          onClick={() => {
-            setMaze(new RecursiveDivisionMaze(dimensions.width, dimensions.height));
-          }}
-        >
-          New Division maze
-        </button>
-        Interval:{" "}
-        <input
-          type="number"
-          min="1"
-          max="1000"
-          step="10"
-          defaultValue={delayBetweenFrames}
-          onChange={handleChange}
-        />{" "}
-        ms.
-        <button
-          onClick={() => {
-            setMaze(new DijkstraMaze(maze));
-          }}
-        >
-          Solve
-        </button>
+        <div>
+          <button
+            onClick={() => {
+              setMaze(cloneDeep(maze));
+            }}
+          >
+            Re-run
+          </button>
+          <button
+            onClick={() => {
+              setMaze(
+                new RecursiveBacktrackMaze(dimensions.width, dimensions.height)
+              );
+            }}
+          >
+            New Backtrack maze
+          </button>
+          <button
+            onClick={() => {
+              setMaze(
+                new RecursiveDivisionMaze(dimensions.width, dimensions.height)
+              );
+            }}
+          >
+            New Division maze
+          </button>
+          Interval:{" "}
+          <input
+            type="number"
+            min="1"
+            max="1000"
+            step="10"
+            defaultValue={delayBetweenFrames}
+            onChange={handleChange}
+          />{" "}
+          ms.
+          <button
+            onClick={() => {
+              setMaze(new DijkstraMaze(maze));
+            }}
+          >
+            Solve
+          </button>
+        </div>
       </div>
     </div>
   );

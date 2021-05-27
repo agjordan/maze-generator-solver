@@ -54,8 +54,8 @@ const Canvas = ({ maze, delayBetweenFrames }: CanvasProps) => {
     context.font = "20px Roboto";
     context.fillText(
       `${step + 1} / ${maze.frames.length}`,
-      maze.width * unitSize + unitSize,
-      100
+      0,
+      maze.height * unitSize + 30
     );
     maze.draw(context, unitSize, step);
 
