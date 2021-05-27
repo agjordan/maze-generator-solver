@@ -81,16 +81,10 @@ const setWallForCellAndNeighbour = (
 
   const relativeX = Math.abs(firstX - cell.x);
   const relativeY = Math.abs(firstY - cell.y);
-  // console.log([firstX, firstY, cell.x, cell.y, direction, relativeX, relativeY]);
 
   if (getNeighbourDirections(grid, relativeX, relativeY).includes(direction)) {
     const neighbour = getCellFromDirection(direction, grid, relativeX, relativeY);
-    if (neighbour) {
-      neighbour.walls[getOppositeDirection(direction)!] = addWalls;
-      console.log([cell.x, cell.y], direction, [neighbour.x, neighbour.y]);
-    }
-  } else {
-    console.log([cell.x, cell.y], direction, "no neighbour");
+    if (neighbour) neighbour.walls[getOppositeDirection(direction)!] = addWalls;
   }
 };
 
@@ -195,14 +189,7 @@ export class Grid {
     this.stack = [];
     this.algorithm = "grid";
 
-    for (let x = 0; x < width; x++) {
-      let col = [];
-      for (let y = 0; y < height; y++) {
-        col.push(new Cell(x, y));
-      }
-      this.grid.push(col);
-    }
-
+    this.generateGrid();
     this.frames = [cloneDeep(this.grid)];
   }
 
@@ -211,7 +198,16 @@ export class Grid {
     this.frames.push(cloneDeep(frame));
   };
 
-  generateMaze(cell: Cell) {}
+  generateGrid = () => {
+    for (let x = 0; x < this.width; x++) {
+      let col = [];
+      for (let y = 0; y < this.height; y++) {
+        col.push(new Cell(x, y));
+      }
+      this.grid.push(col);
+    }
+  };
+  generateMaze = (cell: Cell) => {};
 
   draw(canvasContext: any, unitSize: number, step: number) {
     // canvasContext.clearRect(0, 0, unitSize * this.width, unitSize * this.height);
@@ -616,10 +612,3 @@ export class RecursiveDivisionMaze extends Grid {
     canvasContext.fill();
   };
 }
-
-// /*
-// All the above algorithms have biases of various sorts: depth-first search is biased toward long corridors, while Kruskal's/Prim's algorithms are biased toward many short dead ends. Wilson's algorithm,[1] on the other hand, generates an unbiased sample from the uniform distribution over all mazes, using loop-erased random walks.
-
-// We begin the algorithm by initializing the maze with one cell chosen arbitrarily. Then we start at a new cell chosen arbitrarily, and perform a random walk until we reach a cell already in the maze—however, if at any point the random walk reaches its own path, forming a loop, we erase the loop from the path before proceeding. When the path reaches the maze, we add it to the maze. Then we perform another loop-erased random walk from another arbitrary starting cell, repeating until all cells have been filled.
-
-// This procedure remains unbiased no matter which method we use to arbitrarily choose starting cells. So we could always choose the first unfilled cell in (say) left-to-right, top-to-bottom order for simplicity.*/
