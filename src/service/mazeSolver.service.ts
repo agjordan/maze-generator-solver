@@ -1,11 +1,4 @@
-import {
-  RecursiveBacktrackMaze,
-  Walls,
-  Cell,
-  Grid,
-  RecursiveDivisionMaze,
-  RecursiveDivisionCell,
-} from "./mazeGenerator.service";
+import { Walls, Cell, Grid, RecursiveDivisionCell } from "./mazeGenerator.service";
 import { cloneDeep } from "lodash";
 
 class CellForSolving extends Cell {
@@ -40,7 +33,7 @@ export class DijkstraSolve extends Grid {
   grid: DijkstraCell[][];
   frames: DijkstraCell[][][];
 
-  constructor(maze: RecursiveBacktrackMaze | RecursiveDivisionMaze) {
+  constructor(maze: Grid) {
     super(maze.width, maze.height);
     this.frames = [];
     this.algorithm = "DijkstraSolve";

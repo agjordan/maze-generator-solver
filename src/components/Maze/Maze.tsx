@@ -21,7 +21,6 @@ const Maze = () => {
     setFrameDelay(newDelay);
   };
 
-  console.log(maze);
   return (
     <div className={styles.mazeContainer}>
       <div className={styles.maze} id="maze">

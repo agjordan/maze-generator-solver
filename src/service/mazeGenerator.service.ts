@@ -1,5 +1,133 @@
 import { cloneDeep } from "lodash";
 
+const possibleMoves = (cell: Cell, grid: Cell[][]): string[] => {
+  let moves = [];
+  if (cell.y - 1 >= 0 && !grid[cell.x][cell.y - 1].visited) moves.push("N");
+  if (cell.x + 1 < grid.length && !grid[cell.x + 1][cell.y].visited) moves.push("E");
+  if (cell.y + 1 < grid[0].length && !grid[cell.x][cell.y + 1].visited)
+    moves.push("S");
+  if (cell.x - 1 >= 0 && !grid[cell.x - 1][cell.y].visited) moves.push("W");
+  return moves;
+};
+
+const getNeighbourDirections = (
+  grid: Cell[][],
+  relativeX: number,
+  relativeY: number
+) => {
+  let directions = [];
+  if (relativeY - 1 >= 0) directions.push("N");
+  if (relativeX + 1 < grid.length) directions.push("E");
+  if (relativeY + 1 < grid[0].length) directions.push("S");
+  if (relativeX - 1 >= 0) directions.push("W");
+  return directions;
+};
+
+const getOppositeDirection = (direction: string): string | null => {
+  switch (direction) {
+    case "N":
+      return "S";
+    case "E":
+      return "W";
+    case "S":
+      return "N";
+    case "W":
+      return "E";
+    default:
+      return null;
+  }
+};
+
+const getRandomIntInclusive = (min: number, max: number): number => {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+const getCellFromDirection = (
+  direction: string,
+  grid: Cell[][],
+  relativeX: number,
+  relativeY: number
+): Cell | undefined => {
+  switch (direction) {
+    case "N":
+      if (relativeY - 1 >= 0) return grid[relativeX][relativeY - 1];
+      return undefined;
+    case "E":
+      if (relativeX + 1 < grid.length) return grid[relativeX + 1][relativeY];
+      return undefined;
+    case "S":
+      if (relativeY + 1 < grid[0].length) return grid[relativeX][relativeY + 1];
+      return undefined;
+    case "W":
+      if (relativeX - 1 >= 0) return grid[relativeX - 1][relativeY];
+      return undefined;
+    default:
+      return undefined;
+  }
+};
+
+const setWallForCellAndNeighbour = (
+  cell: Cell,
+  direction: string,
+  grid: Cell[][],
+  addWalls: boolean = true
+) => {
+  cell.walls[direction] = addWalls;
+
+  const firstX = grid[0][0].x;
+  const firstY = grid[0][0].y;
+
+  const relativeX = Math.abs(firstX - cell.x);
+  const relativeY = Math.abs(firstY - cell.y);
+  // console.log([firstX, firstY, cell.x, cell.y, direction, relativeX, relativeY]);
+
+  if (getNeighbourDirections(grid, relativeX, relativeY).includes(direction)) {
+    const neighbour = getCellFromDirection(direction, grid, relativeX, relativeY);
+    if (neighbour) {
+      neighbour.walls[getOppositeDirection(direction)!] = addWalls;
+      console.log([cell.x, cell.y], direction, [neighbour.x, neighbour.y]);
+    }
+  } else {
+    console.log([cell.x, cell.y], direction, "no neighbour");
+  }
+};
+
+const setWallForCollection = (
+  cells: Cell[],
+  direction: string,
+  grid: Cell[][],
+  addWalls: boolean
+) => {
+  cells.forEach((cell) =>
+    setWallForCellAndNeighbour(cell, direction, grid, addWalls)
+  );
+};
+
+const createHorizontalWallWithGate = (
+  index: number,
+  grid: RecursiveDivisionCell[][]
+): void => {
+  const row = grid.map((col) => col[index]);
+  setWallForCollection(row, "S", grid, true);
+
+  const randomCell = row[getRandomIntInclusive(1, row.length - 2)];
+  setWallForCellAndNeighbour(randomCell, "S", grid, false);
+};
+
+const createVerticalWallWithGate = (
+  index: number,
+  grid: RecursiveDivisionCell[][]
+): void => {
+  const column = grid[index];
+
+  setWallForCollection(column, "E", grid, true);
+
+  const randomCell = column[getRandomIntInclusive(1, column.length - 2)];
+  setWallForCellAndNeighbour(randomCell, "E", grid, false);
+};
+
 export class Walls {
   N: boolean;
   E: boolean;
@@ -51,21 +179,6 @@ export class RecursiveDivisionCell extends Cell {
   }
 }
 
-const getOppositeDirection = (direction: string): string | null => {
-  switch (direction) {
-    case "N":
-      return "S";
-    case "E":
-      return "W";
-    case "S":
-      return "N";
-    case "W":
-      return "E";
-    default:
-      return null;
-  }
-};
-
 export class Grid {
   height: number;
   width: number;
@@ -90,19 +203,12 @@ export class Grid {
       this.grid.push(col);
     }
 
-    this.frames = cloneDeep([this.grid]);
-    this.grid[0][0].visited = true;
+    this.frames = [cloneDeep(this.grid)];
   }
 
-  possibleMoves = (cell: Cell): string[] => {
-    let moves = [];
-    if (cell.y - 1 >= 0 && !this.grid[cell.x][cell.y - 1].visited) moves.push("N");
-    if (cell.x + 1 < this.width && !this.grid[cell.x + 1][cell.y].visited)
-      moves.push("E");
-    if (cell.y + 1 < this.height && !this.grid[cell.x][cell.y + 1].visited)
-      moves.push("S");
-    if (cell.x - 1 >= 0 && !this.grid[cell.x - 1][cell.y].visited) moves.push("W");
-    return moves;
+  createFrame = (frame: Cell[][] = []) => {
+    if (frame.length < 1) frame = cloneDeep(this.grid);
+    this.frames.push(cloneDeep(frame));
   };
 
   generateMaze(cell: Cell) {}
@@ -202,49 +308,32 @@ export class RecursiveBacktrackMaze extends Grid {
     super(width, height);
     const t0 = performance.now();
     this.algorithm = "recursiveBacktrackGenerate";
+
     this.generateMaze(this.grid[0][0]);
 
     let lastFrame = this.frames.pop();
     if (lastFrame) {
       lastFrame[0][0].backtracked = true;
-      this.frames.push(cloneDeep(lastFrame));
+      this.createFrame(cloneDeep(lastFrame));
     }
     const t1 = performance.now();
     console.log("maze generated in: ", t1 - t0, " milliseconds.");
   }
 
   generateMaze = (cell: Cell) => {
-    const currentFrame = cloneDeep(this.grid);
-    this.frames.push(currentFrame);
+    cell.visited = true;
+    this.createFrame();
 
-    const newCellFromDirection = (direction: string): Cell | null => {
-      switch (direction) {
-        case "N":
-          return this.grid[cell.x][cell.y - 1];
-        case "E":
-          return this.grid[cell.x + 1][cell.y];
-        case "S":
-          return this.grid[cell.x][cell.y + 1];
-        case "W":
-          return this.grid[cell.x - 1][cell.y];
-        default:
-          return null;
-      }
-    };
+    const directions = possibleMoves(cell, this.grid);
+    const direction = directions[getRandomIntInclusive(0, directions.length - 1)];
+    const nextCell = getCellFromDirection(direction, this.grid, cell.x, cell.y);
 
-    const directions = this.possibleMoves(cell);
-    const direction = directions[Math.floor(Math.random() * directions.length)];
-    const newCell = newCellFromDirection(direction);
-    const newDirection = getOppositeDirection(direction);
+    if (!nextCell && this.stack.length < 1) return;
 
-    if (!newCell && !(this.stack.length > 0)) return;
-
-    if (newCell && newDirection) {
+    if (nextCell) {
+      setWallForCellAndNeighbour(cell, direction, this.grid, false);
       this.stack.push(cell);
-      cell.walls[direction] = false;
-      newCell.walls[newDirection] = false;
-      newCell.visited = true;
-      this.generateMaze(newCell);
+      this.generateMaze(nextCell);
     } else {
       cell.backtracked = true;
       const oldCell = this.stack.pop();
@@ -353,6 +442,8 @@ export class RecursiveDivisionMaze extends Grid {
     const t0 = performance.now();
     this.algorithm = "recursiveDivisionGenerate";
     this.grid = [];
+
+    // replace Cells with RecursiveDivisionCells (they have no walls)
     for (let x = 0; x < width; x++) {
       let col = [];
       for (let y = 0; y < height; y++) {
@@ -361,85 +452,28 @@ export class RecursiveDivisionMaze extends Grid {
       this.grid.push(col);
     }
 
-    //add perimeter walls
-    this.grid[0].forEach((cell) => (cell.walls.W = true));
-    this.grid[this.grid.length - 1].forEach((cell) => (cell.walls.E = true));
+    //adding W, E, N, S perimeter walls
+    let topRow: RecursiveDivisionCell[] = [];
+    let botRow: RecursiveDivisionCell[] = [];
     this.grid.forEach((col) => {
-      col[0].walls.N = true;
-      col[col.length - 1].walls.S = true;
+      topRow.push(col[0]);
+      botRow.push(col[col.length - 1]);
     });
+    setWallForCollection(topRow, "N", this.grid, true);
+    setWallForCollection(botRow, "S", this.grid, true);
+    setWallForCollection(this.grid[0], "W", this.grid, true);
+    setWallForCollection(this.grid[this.grid.length - 1], "E", this.grid, true);
 
     this.frames = [this.grid];
 
     this.generateMaze();
+
     const t1 = performance.now();
     console.log("maze generated in: ", t1 - t0, " milliseconds.");
   }
 
   generateMaze = (): void => {
-    const newCellFromDirection = (
-      cell: RecursiveDivisionCell,
-      direction: string
-    ): RecursiveDivisionCell | undefined => {
-      switch (direction) {
-        case "N":
-          return this.grid[cell.x][cell.y - 1];
-        case "E":
-          return this.grid[cell.x + 1][cell.y];
-        case "S":
-          return this.grid[cell.x][cell.y + 1];
-        case "W":
-          return this.grid[cell.x - 1][cell.y];
-        default:
-          return undefined;
-      }
-    };
-
-    const setIndividualWall = (
-      cell: RecursiveDivisionCell,
-      direction: string,
-      addWalls: boolean = true
-    ) => {
-      cell.walls[direction] = addWalls;
-      const neighbour = newCellFromDirection(cell, direction);
-      if (neighbour) neighbour.walls[getOppositeDirection(direction)!] = addWalls;
-    };
-
-    const getRandomIntBetween = (min: number, max: number): number => {
-      min = Math.ceil(min);
-      max = Math.floor(max);
-      return Math.floor(Math.random() * (max - min + 1) + min);
-    };
-
-    const setVerticalWall = (
-      index: number,
-      grid: RecursiveDivisionCell[][]
-    ): void => {
-      const column = grid[index];
-      column.forEach((cell) => {
-        setIndividualWall(cell, "E", true);
-      });
-
-      const randomCell = column[getRandomIntBetween(1, column.length - 2)];
-      setIndividualWall(randomCell, "E", false);
-      this.frames.push(cloneDeep(this.grid));
-    };
-
-    const setHorizontalWall = (
-      index: number,
-      grid: RecursiveDivisionCell[][]
-    ): void => {
-      const column = grid.map((col) => col[index]);
-      column.forEach((cell) => {
-        setIndividualWall(cell, "S", true);
-      });
-
-      const randomCell = column[getRandomIntBetween(1, column.length - 2)];
-      setIndividualWall(randomCell, "S", false);
-      this.frames.push(cloneDeep(this.grid));
-    };
-
-    const recursiveGenerate = (grid: RecursiveDivisionCell[][]) => {
+    const recusiveDivisionGeneration = (grid: RecursiveDivisionCell[][]) => {
       let width: number;
       let height: number;
       let verticalSpace: boolean;
@@ -448,16 +482,18 @@ export class RecursiveDivisionMaze extends Grid {
       height = grid[0].length;
       verticalSpace = width < height;
 
+      //exit condition to ensure we don't have an endless loop, also controls size of final rooms
       if (width <= 1 || height <= 1) return;
+
       this.grid.forEach((col) => col.forEach((cell) => (cell.currentArea = false)));
       grid.forEach((col) => col.forEach((cell) => (cell.currentArea = true)));
-
-      this.frames.push(cloneDeep(this.grid));
+      this.createFrame();
 
       if (verticalSpace) {
-        const index = getRandomIntBetween(0, height - 1);
+        const index = getRandomIntInclusive(0, height - 2);
 
-        setHorizontalWall(index, grid);
+        createHorizontalWallWithGate(index, grid);
+        this.createFrame();
 
         //split and recurse
         let half1: RecursiveDivisionCell[][] = [];
@@ -467,26 +503,25 @@ export class RecursiveDivisionMaze extends Grid {
           half1.push(col.slice(0, index + 1));
           half2.push(col.slice(index + 1));
         });
-
-        if (!!half1[0].length) recursiveGenerate(half1);
-        if (!!half2[0].length) recursiveGenerate(half2);
+        if (!!half1[0].length) recusiveDivisionGeneration(half1);
+        if (!!half2[0].length) recusiveDivisionGeneration(half2);
       } else {
-        const index = getRandomIntBetween(0, width - 2);
+        const index = getRandomIntInclusive(0, width - 2);
 
-        setVerticalWall(index, grid);
+        createVerticalWallWithGate(index, grid);
+        this.createFrame();
 
         const half1 = grid.slice(0, index + 1);
         const half2 = grid.slice(index + 1);
-
-        if (!!half1.length) recursiveGenerate(half1);
-        if (!!half2.length) recursiveGenerate(half2);
+        if (!!half1.length) recusiveDivisionGeneration(half1);
+        if (!!half2.length) recusiveDivisionGeneration(half2);
       }
     };
+
     this.frames = [this.grid];
-    recursiveGenerate(this.grid);
+    recusiveDivisionGeneration(this.grid);
     this.grid.forEach((col) => col.forEach((cell) => (cell.currentArea = false)));
     this.frames.push(cloneDeep(this.grid));
-    console.log("generated");
   };
 
   draw = (canvasContext: any, unitSize: number, step: number) => {
@@ -581,3 +616,10 @@ export class RecursiveDivisionMaze extends Grid {
     canvasContext.fill();
   };
 }
+
+// /*
+// All the above algorithms have biases of various sorts: depth-first search is biased toward long corridors, while Kruskal's/Prim's algorithms are biased toward many short dead ends. Wilson's algorithm,[1] on the other hand, generates an unbiased sample from the uniform distribution over all mazes, using loop-erased random walks.
+
+// We begin the algorithm by initializing the maze with one cell chosen arbitrarily. Then we start at a new cell chosen arbitrarily, and perform a random walk until we reach a cell already in the maze—however, if at any point the random walk reaches its own path, forming a loop, we erase the loop from the path before proceeding. When the path reaches the maze, we add it to the maze. Then we perform another loop-erased random walk from another arbitrary starting cell, repeating until all cells have been filled.
+
+// This procedure remains unbiased no matter which method we use to arbitrarily choose starting cells. So we could always choose the first unfilled cell in (say) left-to-right, top-to-bottom order for simplicity.*/

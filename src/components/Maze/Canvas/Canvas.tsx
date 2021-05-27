@@ -2,12 +2,11 @@ import React, { useRef, useEffect, useState } from "react";
 import {
   Grid,
   RecursiveBacktrackMaze,
-  RecursiveDivisionMaze,
 } from "../../../service/mazeGenerator.service";
 import { DijkstraSolve } from "../../../service/mazeSolver.service";
 
 type CanvasProps = {
-  maze: Grid | RecursiveBacktrackMaze | RecursiveDivisionMaze | DijkstraSolve;
+  maze: Grid | RecursiveBacktrackMaze | DijkstraSolve;
   delayBetweenFrames: number;
 };
 
