@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 
-const possibleMoves = (cell: Cell, grid: Cell[][]): string[] => {
+const getUnvisitedDirections = (cell: Cell, grid: Cell[][]): string[] => {
   let moves = [];
   if (cell.y - 1 >= 0 && !grid[cell.x][cell.y - 1].visited) moves.push("N");
   if (cell.x + 1 < grid.length && !grid[cell.x + 1][cell.y].visited) moves.push("E");
@@ -106,7 +106,7 @@ const createHorizontalWallWithGate = (
   const row = grid.map((col) => col[index]);
   setWallForCollection(row, "S", grid, true);
 
-  const randomCell = row[getRandomIntInclusive(1, row.length - 2)];
+  const randomCell = row[getRandomIntInclusive(1, row.length - 1)];
   setWallForCellAndNeighbour(randomCell, "S", grid, false);
 };
 
@@ -118,7 +118,7 @@ const createVerticalWallWithGate = (
 
   setWallForCollection(column, "E", grid, true);
 
-  const randomCell = column[getRandomIntInclusive(1, column.length - 2)];
+  const randomCell = column[getRandomIntInclusive(1, column.length - 1)];
   setWallForCellAndNeighbour(randomCell, "E", grid, false);
 };
 
@@ -180,22 +180,24 @@ export class Grid {
   stack: Cell[];
   frames: Cell[][][];
   algorithm: string;
+  drawEveryFrame: boolean;
   [key: string]: any;
 
-  constructor(width: number, height: number) {
-    this.height = height <= 50 ? height : 50;
-    this.width = width <= 50 ? width : 50;
+  constructor(width: number, height: number, drawEveryFrame: boolean = true) {
+    this.height = height;
+    this.width = width;
     this.grid = [];
     this.stack = [];
     this.algorithm = "grid";
+    this.drawEveryFrame = drawEveryFrame;
 
     this.generateGrid();
     this.frames = [cloneDeep(this.grid)];
   }
 
   createFrame = (frame: Cell[][] = []) => {
-    if (frame.length < 1) frame = cloneDeep(this.grid);
-    this.frames.push(cloneDeep(frame));
+    if (frame.length < 1) frame = this.grid;
+    if (this.drawEveryFrame) this.frames.push(cloneDeep(frame));
   };
 
   generateGrid = () => {
@@ -207,6 +209,7 @@ export class Grid {
       this.grid.push(col);
     }
   };
+
   generateMaze = (cell: Cell) => {};
 
   draw(canvasContext: any, unitSize: number, step: number) {
@@ -300,18 +303,15 @@ export class Grid {
 }
 
 export class RecursiveBacktrackMaze extends Grid {
-  constructor(width: number, height: number) {
-    super(width, height);
+  constructor(width: number, height: number, drawEveryFrame: boolean = true) {
+    super(width, height, drawEveryFrame);
     const t0 = performance.now();
     this.algorithm = "recursiveBacktrackGenerate";
 
     this.generateMaze(this.grid[0][0]);
 
-    let lastFrame = this.frames.pop();
-    if (lastFrame) {
-      lastFrame[0][0].backtracked = true;
-      this.createFrame(cloneDeep(lastFrame));
-    }
+    this.grid[0][0].backtracked = true;
+    this.frames.push(cloneDeep(this.grid));
     const t1 = performance.now();
     console.log("maze generated in: ", t1 - t0, " milliseconds.");
   }
@@ -320,7 +320,7 @@ export class RecursiveBacktrackMaze extends Grid {
     cell.visited = true;
     this.createFrame();
 
-    const directions = possibleMoves(cell, this.grid);
+    const directions = getUnvisitedDirections(cell, this.grid);
     const direction = directions[getRandomIntInclusive(0, directions.length - 1)];
     const nextCell = getCellFromDirection(direction, this.grid, cell.x, cell.y);
 
@@ -340,7 +340,7 @@ export class RecursiveBacktrackMaze extends Grid {
   };
 
   draw(canvasContext: any, unitSize: number, step: number) {
-    // canvasContext.clearRect(0, 0, unitSize * this.width, unitSize * this.height);
+    if (!this.frames[step]) return;
     canvasContext.beginPath();
     this.frames[step].forEach((col) => {
       canvasContext.strokeStyle = "#800080";
@@ -433,8 +433,8 @@ export class RecursiveDivisionMaze extends Grid {
   grid: RecursiveDivisionCell[][];
   frames: RecursiveDivisionCell[][][];
 
-  constructor(width: number, height: number) {
-    super(width, height);
+  constructor(width: number, height: number, drawEveryFrame: boolean = true) {
+    super(width, height, drawEveryFrame);
     const t0 = performance.now();
     this.algorithm = "recursiveDivisionGenerate";
     this.grid = [];
@@ -517,7 +517,7 @@ export class RecursiveDivisionMaze extends Grid {
     this.frames = [this.grid];
     recusiveDivisionGeneration(this.grid);
     this.grid.forEach((col) => col.forEach((cell) => (cell.currentArea = false)));
-    this.frames.push(cloneDeep(this.grid));
+    this.createFrame();
   };
 
   draw = (canvasContext: any, unitSize: number, step: number) => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import styles from "./Maze.module.scss";
 import {
   Grid,
@@ -10,15 +10,45 @@ import { cloneDeep } from "lodash";
 import { DijkstraSolve } from "../../service/mazeSolver.service";
 
 const Maze = () => {
-  const [dimensions] = useState({ width: 15, height: 10 });
+  const [dimensions] = useState({ width: 30, height: 15 });
   const [maze, setMaze] = useState(new Grid(dimensions.width, dimensions.height));
   const [delayBetweenFrames, setFrameDelay] = useState(1);
+  const [animate, setAnimate] = useState(true);
+
+  let solveButtonRef = useRef<HTMLButtonElement>(null);
+  let backtrackButtonRef = useRef<HTMLButtonElement>(null);
+  let divisionButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleChange = (event: any): void => {
     let newDelay = Number(event.target.value);
     newDelay = Math.max(newDelay, 0);
     newDelay = Math.min(newDelay, 2000);
     setFrameDelay(newDelay);
+  };
+
+  const handleSolveClick = () => {
+    if (!!solveButtonRef.current)
+      solveButtonRef.current.setAttribute("disabled", "disabled");
+    setMaze(new DijkstraSolve(maze, animate));
+    if (!!solveButtonRef.current) solveButtonRef.current.removeAttribute("disabled");
+  };
+
+  const handleBacktrackClick = () => {
+    if (!!backtrackButtonRef.current)
+      backtrackButtonRef.current.setAttribute("disabled", "disabled");
+    setMaze(
+      new RecursiveBacktrackMaze(dimensions.width, dimensions.height, animate)
+    );
+    if (!!backtrackButtonRef.current)
+      backtrackButtonRef.current.removeAttribute("disabled");
+  };
+
+  const handleDivisionClick = () => {
+    if (!!divisionButtonRef.current)
+      divisionButtonRef.current.setAttribute("disabled", "disabled");
+    setMaze(new RecursiveDivisionMaze(dimensions.width, dimensions.height, animate));
+    if (!!divisionButtonRef.current)
+      divisionButtonRef.current.removeAttribute("disabled");
   };
 
   return (
@@ -33,29 +63,13 @@ const Maze = () => {
           >
             Re-run
           </button>
-          <button
-            onClick={() => {
-              setMaze(
-                new RecursiveBacktrackMaze(dimensions.width, dimensions.height)
-              );
-            }}
-          >
+          <button ref={backtrackButtonRef} onClick={handleBacktrackClick}>
             New Backtrack maze
           </button>
-          <button
-            onClick={() => {
-              setMaze(
-                new RecursiveDivisionMaze(dimensions.width, dimensions.height)
-              );
-            }}
-          >
+          <button ref={divisionButtonRef} onClick={handleDivisionClick}>
             New Division maze
           </button>
-          <button
-            onClick={() => {
-              setMaze(new DijkstraSolve(maze));
-            }}
-          >
+          <button ref={solveButtonRef} onClick={handleSolveClick}>
             Solve
           </button>
           Interval:{" "}
@@ -68,6 +82,16 @@ const Maze = () => {
             onChange={handleChange}
           />{" "}
           ms.
+          <input
+            type="checkbox"
+            name="animate"
+            id="animate"
+            defaultChecked={true}
+            onChange={() => {
+              setAnimate(!animate);
+            }}
+          />
+          Animate
         </div>
       </div>
     </div>

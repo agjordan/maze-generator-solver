@@ -1,5 +1,103 @@
-import { Walls, Cell, Grid, RecursiveDivisionCell } from "./mazeGenerator.service";
 import { cloneDeep } from "lodash";
+import { Walls, Cell, Grid, RecursiveDivisionCell } from "./mazeGenerator.service";
+// import { cloneDeep } from "lodash";
+
+const getAllCells = (maze: DijkstraSolve): DijkstraCell[] => {
+  let cells: DijkstraCell[] = [];
+  for (let row of maze.grid) {
+    for (let cell of row) {
+      cells.push(cell);
+    }
+  }
+  return cells;
+};
+
+const getUnvisitedCellFromDirection = (
+  cell: DijkstraCell,
+  direction: string,
+  grid: DijkstraCell[][]
+): DijkstraCell | null => {
+  switch (direction) {
+    case "N":
+      if (!grid[cell.x][cell.y - 1]?.visited) return grid[cell.x][cell.y - 1];
+      return null;
+    case "E":
+      if (!grid[cell.x + 1][cell.y]?.visited) return grid[cell.x + 1][cell.y];
+      return null;
+    case "S":
+      if (!grid[cell.x][cell.y + 1]?.visited) return grid[cell.x][cell.y + 1];
+      return null;
+    case "W":
+      if (!grid[cell.x - 1][cell.y]?.visited) return grid[cell.x - 1][cell.y];
+      return null;
+    default:
+      return null;
+  }
+};
+
+const getUnvisitedNeighbours = (
+  cell: DijkstraCell,
+  grid: DijkstraCell[][]
+): DijkstraCell[] => {
+  let allMoves = ["N", "E", "S", "W"];
+  let cellWalls: string[] = [];
+
+  Object.entries(cell.walls).forEach(([key, value]) => {
+    if (value) cellWalls.push(key);
+  });
+
+  const isCell = (candidate: any): candidate is DijkstraCell => {
+    if (candidate instanceof DijkstraCell) return true;
+    return false;
+  };
+
+  const cellMoves = allMoves
+    .filter((n) => !cellWalls.includes(n))
+    .map((move) => getUnvisitedCellFromDirection(cell, move, grid));
+  const unvisitedNeighbours: DijkstraCell[] = cellMoves.filter(isCell);
+
+  return unvisitedNeighbours;
+};
+
+const sortNodesByDistance = (nodeList: DijkstraCell[]) => {
+  return nodeList.sort(
+    (firstNode, secondNode) =>
+      firstNode.distanceFromSource - secondNode.distanceFromSource
+  );
+};
+
+const cellNotOnPathFromDirection = (
+  direction: string,
+  cell: DijkstraCell,
+  grid: DijkstraCell[][]
+): DijkstraCell | null => {
+  switch (direction) {
+    case "N":
+      if (!grid[cell.x][cell.y - 1]?.onPath) return grid[cell.x][cell.y - 1];
+      return null;
+    case "E":
+      if (!grid[cell.x + 1][cell.y]?.onPath) return grid[cell.x + 1][cell.y];
+      return null;
+    case "S":
+      if (!grid[cell.x][cell.y + 1]?.onPath) return grid[cell.x][cell.y + 1];
+      return null;
+    case "W":
+      if (!grid[cell.x - 1][cell.y]?.onPath) return grid[cell.x - 1][cell.y];
+      return null;
+    default:
+      return null;
+  }
+};
+
+const getCellWalls = (cell: DijkstraCell) => {
+  let cellWalls: string[] = [];
+
+  Object.entries(cell.walls).forEach(([key, value]) => {
+    if (value) cellWalls.push(key);
+  });
+
+  return cellWalls;
+};
 
 class CellForSolving extends Cell {
   visited: boolean;
@@ -23,129 +121,60 @@ class DijkstraCell extends CellForSolving {
     this.moveCost = 1;
     this.onPath = false;
   }
-
-  setDistanceFromSource(distance: number) {
-    this.distanceFromSource = distance;
-  }
 }
 
 export class DijkstraSolve extends Grid {
   grid: DijkstraCell[][];
   frames: DijkstraCell[][][];
+  mazeCells: Cell[][];
 
-  constructor(maze: Grid) {
-    super(maze.width, maze.height);
+  constructor(maze: Grid, animate: boolean) {
+    super(maze.width, maze.height, animate);
     this.frames = [];
     this.algorithm = "DijkstraSolve";
-
-    this.grid = maze.grid.map((row: RecursiveDivisionCell[] | Cell[]) => {
-      return row.map((cell: RecursiveDivisionCell | Cell) => {
-        return new DijkstraCell(cell);
-      });
-    });
-
-    this.solve();
+    this.mazeCells = maze.grid;
+    this.grid = this.generateGrid();
+    this.createFrame();
+    try {
+      this.solve();
+    } catch (error) {
+      alert("This maze cannot be solved!");
+      console.log(error);
+    }
   }
 
-  getUnvisitedNeighbours = (cell: DijkstraCell): DijkstraCell[] => {
-    let allMoves = ["N", "E", "S", "W"];
-    let cellWalls: string[] = [];
-
-    Object.entries(cell.walls).forEach(([key, value]) => {
-      if (value) cellWalls.push(key);
-    });
-
-    const cellFromDirection = (direction: string): DijkstraCell | null => {
-      switch (direction) {
-        case "N":
-          if (!this.grid[cell.x][cell.y - 1]?.visited)
-            return this.grid[cell.x][cell.y - 1];
-          return null;
-        case "E":
-          if (!this.grid[cell.x + 1][cell.y]?.visited)
-            return this.grid[cell.x + 1][cell.y];
-          return null;
-        case "S":
-          if (!this.grid[cell.x][cell.y + 1]?.visited)
-            return this.grid[cell.x][cell.y + 1];
-          return null;
-        case "W":
-          if (!this.grid[cell.x - 1][cell.y]?.visited)
-            return this.grid[cell.x - 1][cell.y];
-          return null;
-        default:
-          return null;
+  generateGrid = () => {
+    const dijkstraGrid = this.mazeCells.map(
+      (row: RecursiveDivisionCell[] | Cell[]) => {
+        return row.map((cell: RecursiveDivisionCell | Cell) => {
+          return new DijkstraCell(cell);
+        });
       }
-    };
-
-    const isCell = (candidate: any): candidate is DijkstraCell => {
-      if (candidate instanceof DijkstraCell) return true;
-      return false;
-    };
-
-    const cellMoves = allMoves
-      .filter((n) => !cellWalls.includes(n))
-      .map((move) => cellFromDirection(move));
-    const validMoves: DijkstraCell[] = cellMoves.filter(isCell)!;
-
-    return validMoves;
+    );
+    return dijkstraGrid;
   };
 
-  getBestPathNeighbor(cell: DijkstraCell) {
+  getClosestVisitableNeighbour(cell: DijkstraCell) {
     let allMoves = ["N", "E", "S", "W"];
-    let cellWalls: string[] = [];
+    const cellWalls = getCellWalls(cell);
 
-    Object.entries(cell.walls).forEach(([key, value]) => {
-      if (value) cellWalls.push(key);
-    });
-
-    const cellFromDirection = (direction: string): DijkstraCell | null => {
-      switch (direction) {
-        case "N":
-          if (!this.grid[cell.x][cell.y - 1]?.onPath)
-            return this.grid[cell.x][cell.y - 1];
-          return null;
-        case "E":
-          if (!this.grid[cell.x + 1][cell.y]?.onPath)
-            return this.grid[cell.x + 1][cell.y];
-          return null;
-        case "S":
-          if (!this.grid[cell.x][cell.y + 1]?.onPath)
-            return this.grid[cell.x][cell.y + 1];
-          return null;
-        case "W":
-          if (!this.grid[cell.x - 1][cell.y]?.onPath)
-            return this.grid[cell.x - 1][cell.y];
-          return null;
-        default:
-          return null;
-      }
-    };
-
-    const isCell = (candidate: any): candidate is DijkstraCell => {
+    const isDijkstraCell = (candidate: any): candidate is DijkstraCell => {
       if (candidate instanceof DijkstraCell) return true;
       return false;
     };
 
     const cellMoves = allMoves
       .filter((n) => !cellWalls.includes(n))
-      .map((move) => cellFromDirection(move));
-    const validMoves: DijkstraCell[] = cellMoves.filter(isCell)!;
+      .map((move) => cellNotOnPathFromDirection(move, cell, this.grid));
 
-    return validMoves.reduce((lowest, cell) =>
+    const validMoves: DijkstraCell[] = cellMoves.filter(isDijkstraCell);
+
+    const closestMove = validMoves.reduce((lowest, cell) =>
       lowest.distanceFromSource < cell.distanceFromSource ? lowest : cell
     );
-  }
 
-  getAllNodes = (): DijkstraCell[] => {
-    let nodes: DijkstraCell[] = [];
-    for (let row of this.grid) {
-      for (let cell of row) {
-        nodes.push(cell);
-      }
-    }
-    return nodes;
-  };
+    return closestMove;
+  }
 
   updateNeighbourDistances = (currentCell: DijkstraCell) => {
     const updateDistance = (currentCell: DijkstraCell, targetCell: DijkstraCell) => {
@@ -153,24 +182,17 @@ export class DijkstraSolve extends Grid {
         currentCell.distanceFromSource + targetCell.moveCost;
     };
 
-    const neighbours = this.getUnvisitedNeighbours(currentCell);
-    neighbours.forEach((cell) => {
+    const neighbours = getUnvisitedNeighbours(currentCell, this.grid);
+
+    neighbours.forEach((cell: DijkstraCell) => {
       updateDistance(currentCell, cell);
     });
   };
 
   solve = () => {
-    const sortNodesByDistance = (nodeList: DijkstraCell[]) => {
-      return nodeList.sort(
-        (firstNode, secondNode) =>
-          firstNode.distanceFromSource - secondNode.distanceFromSource
-      );
-    };
-
     const t0 = performance.now();
-
     const exitCell = this.grid[this.width - 1][this.height - 1];
-    const unvisitedCells = this.getAllNodes();
+    const unvisitedCells = getAllCells(this);
     const startCell = this.grid[0][0];
     startCell.distanceFromSource = 0;
 
@@ -185,15 +207,16 @@ export class DijkstraSolve extends Grid {
       currentCell.visited = true;
 
       this.updateNeighbourDistances(currentCell);
-      this.frames.push(cloneDeep(this.grid));
+      this.createFrame();
     }
 
     let currentCell = exitCell;
 
     while (!(currentCell === startCell)) {
       currentCell.onPath = true;
-      const nextCell = this.getBestPathNeighbor(currentCell);
-      this.frames.push(cloneDeep(this.grid));
+      const nextCell = this.getClosestVisitableNeighbour(currentCell);
+      this.createFrame();
+
       currentCell = nextCell;
     }
 
@@ -205,8 +228,8 @@ export class DijkstraSolve extends Grid {
   };
 
   draw(canvasContext: any, unitSize: number, step: number) {
-    canvasContext.clearRect(0, 0, unitSize * this.width, unitSize * this.height);
     if (this.frames[step] === undefined) return;
+
     canvasContext.strokeStyle = "#800080";
     canvasContext.lineWidth = 5;
     canvasContext.beginPath();
@@ -221,7 +244,6 @@ export class DijkstraSolve extends Grid {
             unitSize + 1
           );
         }
-
         if (cell.onPath) {
           canvasContext.fillStyle = "#00BFFF";
           canvasContext.fillRect(
